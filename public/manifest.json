@@ -1,0 +1,22 @@
+{
+  "name": "yt-timer",
+  "description": "Time your YouTube consumption",
+  "version": "1.0",
+  "manifest_version": 3,
+  "permissions": ["storage"],
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "yt-timer-logo.png",
+      "32": "yt-timer-logo.png",
+      "48": "yt-timer-logo.png",
+      "128": "yt-timer-logo.png"
+    }
+  },
+  "icons": {
+    "16": "yt-timer-logo.png",
+    "32": "yt-timer-logo.png",
+    "48": "yt-timer-logo.png",
+    "128": "yt-timer-logo.png"
+  }
+}
