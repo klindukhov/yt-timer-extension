@@ -5,37 +5,37 @@ export default function App() {
   const [time, setTime] = useState("");
 
   useEffect(() => {
-    if (!window.localStorage.getItem("initialTimestamp")) {
-      setInitialTimestamp();
-    }
+    setInitialTimestamp();
   }, []);
 
   useEffect(() => {
+    let lastSavedInterval = getSavedTimeIntervalInSeconds();
     setInterval(() => {
-      const currentTimestamp = new Date();
-      const initialTimestamp = new Date(
-        window.localStorage.getItem("initialTimestamp") ?? ""
-      );
+      if (getSavedTimeIntervalInSeconds() === 0) lastSavedInterval = 0;
+      const intervalInSeconds =
+        getCurrentIntervalInSeconds() + lastSavedInterval;
 
-      const intervalInSeconds = Math.floor(
-        (currentTimestamp.getTime() - initialTimestamp.getTime()) / 1000
-      );
+      setSavedTimeIntervalInSeconds(intervalInSeconds);
 
-      const hours = Math.floor(intervalInSeconds / 3600);
-      const minutes = Math.floor((intervalInSeconds - 3600 * hours) / 60);
-      const seconds = intervalInSeconds - 3600 * hours - 60 * minutes;
-
-      setTime(
-        (hours < 10 ? "0" + hours : hours) +
-          ":" +
-          (minutes < 10 ? "0" + minutes : minutes) +
-          ":" +
-          (seconds < 10 ? "0" + seconds : seconds)
-      );
+      updateTimer(intervalInSeconds);
     }, 1000);
   }, []);
 
-  const setInitialTimestamp = () => {
+  const updateTimer = (intervalInSeconds : number) : void => {
+    const hours = Math.floor(intervalInSeconds / 3600);
+    const minutes = Math.floor((intervalInSeconds - 3600 * hours) / 60);
+    const seconds = intervalInSeconds - 3600 * hours - 60 * minutes;
+
+    setTime(
+      (hours < 10 ? "0" + hours : hours) +
+        ":" +
+        (minutes < 10 ? "0" + minutes : minutes) +
+        ":" +
+        (seconds < 10 ? "0" + seconds : seconds)
+    );
+  };
+
+  const setInitialTimestamp = (): void => {
     const currentTimestamp = new Date();
     window.localStorage.setItem(
       "initialTimestamp",
@@ -43,9 +43,40 @@ export default function App() {
     );
   };
 
+  const setSavedTimeIntervalInSeconds = (interval: number): void => {
+    window.localStorage.setItem(
+      "savedTimeIntervalInSeconds",
+      interval.toString()
+    );
+  };
+
+  const getSavedTimeIntervalInSeconds = (): number => {
+    return (
+      Number(window.localStorage.getItem("savedTimeIntervalInSeconds")) ?? 0
+    );
+  };
+
+  const getCurrentIntervalInSeconds = (): number => {
+    const currentTimestamp = new Date();
+    const initialTimestamp = new Date(
+      window.localStorage.getItem("initialTimestamp") ?? ""
+    );
+
+    return Math.floor(
+      (currentTimestamp.getTime() - initialTimestamp.getTime()) / 1000
+    );
+  };
+
+  const resetTimer = () => {
+    setSavedTimeIntervalInSeconds(0);
+    setInitialTimestamp();
+  };
+
   return (
     <div className='App'>
-      <Timer title="reset" onClick={setInitialTimestamp}>{time}</Timer>
+      <Timer title='reset' onClick={resetTimer}>
+        {time}
+      </Timer>
     </div>
   );
 }
