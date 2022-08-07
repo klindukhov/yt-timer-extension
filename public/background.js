@@ -1,38 +1,72 @@
-chrome.tabs.onActivated.addListener(() => {
-  chrome.tabs
-    .query({ active: true, lastFocusedWindow: true })
-    .then((data) => handleUrlChange(data));
-});
+const getDailyIntervalLog = () => {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(["dailyIntervalLog"], (data) => {
+      if (data["dailyIntervalLog"] === undefined) {
+        reject();
+      } else {
+        resolve(data["dailyIntervalLog"]);
+      }
+    });
+  });
+};
 
-chrome.tabs.onUpdated.addListener(() => {
-  chrome.tabs
-    .query({ active: true, lastFocusedWindow: true })
-    .then((data) => handleUrlChange(data));
-});
+const updateDailyIntervalLog = async (currentDailyInterval) => {
+  let newDailyLog = (await getDailyIntervalLog()) ?? {};
+  newDailyLog[new Date().toISOString().split("T")[0]] = currentDailyInterval;
+  chrome.storage.local.set({
+    dailyIntervalLog: newDailyLog,
+  });
+};
 
-const handleUrlChange = (data) => {
-  if (data[0].url.includes("youtube")) {
-    isTimerOn = true;
-  } else {
-    isTimerOn = false;
+const getCurrentDailyInterval = async () => {
+  return (
+    (await getDailyIntervalLog())[new Date().toISOString().split("T")[0]] ?? 0
+  );
+};
+
+const getCurrentSessionInterval = async () => {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(["currentSessionInterval"], (result) => {
+      if (result["currentSessionInterval"] === undefined) {
+        reject();
+      } else {
+        resolve(result["currentSessionInterval"]);
+      }
+    });
+  });
+};
+
+const setCurrentSessionInterval = (interval) => {
+  chrome.storage.local.set({ currentSessionInterval: interval });
+};
+
+const isTimerOn = async () => {
+  let data = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  try {
+    return new URL(data[0]?.url).hostname === "www.youtube.com";
+  } catch (e) {
+    return false;
   }
 };
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  sendResponse(time);
-});
-
-let isTimerOn = false;
-
-let time = 0;
-chrome.storage.sync.get(["currentIntervalInSeconds"], (interval) => {
-  time = interval.currentIntervalInSeconds ?? 0;
-});
-
 setInterval(() => {
-  if (isTimerOn) {
-    time++;
-    chrome.storage.sync.set({ currentIntervalInSeconds: time });
-  }
-  console.log(time);
+  isTimerOn().then(async (result) => {
+    if (result) {
+      setCurrentSessionInterval((await getCurrentSessionInterval()) + 1);
+      updateDailyIntervalLog((await getCurrentDailyInterval()) + 1);
+      dailyTime = await getCurrentDailyInterval();
+      sessionTime = await getCurrentSessionInterval();
+    }
+  });
 }, 1000);
+
+let dailyTime = 0,
+  sessionTime = 0;
+
+chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+  if (message === "reset") setCurrentSessionInterval(0);
+  sendResponse({
+    dailyTime: dailyTime,
+    sessionTime: sessionTime,
+  });
+});
